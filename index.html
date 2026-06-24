@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GUCCI Bamboo — Realtà Aumentata</title>
+<style>
+  :root { --bg:#f4f3f1; --fg:#1a1a1a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font-family:"Times New Roman",Georgia,serif;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:28px;
+  }
+  .card { max-width:360px; }
+  h1 { font-size:22px; font-weight:400; letter-spacing:5px;
+       text-transform:uppercase; margin:0 0 6px; }
+  .sub { font-size:13px; letter-spacing:2px; text-transform:uppercase;
+         color:#888; margin:0 0 28px; }
+  p { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      font-size:14px; line-height:1.7; color:#555; margin:0 0 26px; }
+  .btn {
+    display:inline-flex; align-items:center; gap:10px;
+    padding:15px 28px; background:var(--fg); color:#fff;
+    text-decoration:none; cursor:pointer; border:none;
+    font-family:"Times New Roman",Georgia,serif;
+    font-size:13px; letter-spacing:2px; text-transform:uppercase;
+  }
+  .btn svg { width:18px; height:18px; fill:none; stroke:#fff; stroke-width:1.6; }
+  .spinner {
+    width:34px; height:34px; margin:0 auto 22px;
+    border:2px solid #ccc; border-top-color:var(--fg);
+    border-radius:50%; animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .hidden { display:none; }
+  .desktop-note { font-size:12px; color:#999; margin-top:24px; line-height:1.6; }
+  /* link Quick Look (deve contenere un <img>) */
+  a[rel="ar"] img { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <h1>Gucci Bamboo</h1>
+  <div class="sub">Augmented Reality</div>
+
+  <!-- Stato: avvio automatico in corso -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Avvio dell'esperienza in realtà aumentata…</p>
+  </div>
+
+  <!-- Stato: fallback manuale (se l'autostart viene bloccato dal browser) -->
+  <div id="manual" class="hidden">
+    <p>Tocca il pulsante per vedere la borsa nel tuo spazio.</p>
+    <a id="arButton" class="btn" href="#">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/>
+        <path d="M3 7l9 4.5L21 7M12 11.5V21"/>
+      </svg>
+      Vedi in AR
+    </a>
+  </div>
+
+  <!-- Stato: desktop / device non supportato -->
+  <div id="desktop" class="hidden">
+    <p>Questa esperienza in realtà aumentata è disponibile da <strong>smartphone</strong>.</p>
+    <p class="desktop-note">Apri questa pagina dal tuo telefono (iPhone o Android) per avviare l'AR.</p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // ---- CONFIG: gli URL dei modelli su jsDelivr ----
+  var GLB  = 'https://cdn.jsdelivr.net/gh/LucaNeri92/gucci-ar-demo@v2/Gucci_Bamboo.glb';
+  var USDZ = 'https://cdn.jsdelivr.net/gh/LucaNeri92/gucci-ar-demo@v2/Gucci_Bamboo.usdz';
+  var TITLE = 'GUCCI Bamboo';
+  var LINK  = 'https://www.gucci.com';
+
+  var ua = navigator.userAgent;
+  var IS_IOS = (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var IS_ANDROID = /android/i.test(ua);
+
+  var elLoading = document.getElementById('loading');
+  var elManual  = document.getElementById('manual');
+  var elDesktop = document.getElementById('desktop');
+  var elButton  = document.getElementById('arButton');
+
+  function show(el) {
+    elLoading.classList.add('hidden');
+    elManual.classList.add('hidden');
+    elDesktop.classList.add('hidden');
+    el.classList.remove('hidden');
+  }
+
+  // ---- iOS: Quick Look ----
+  function launchIOS() {
+    var a = document.createElement('a');
+    a.setAttribute('rel', 'ar');
+    a.appendChild(document.createElement('img'));
+    a.setAttribute('href', USDZ + '#callToAction=' + encodeURIComponent('Gucci.com'));
+    document.body.appendChild(a);
+    a.click();
+  }
+
+  // ---- Android: Scene Viewer ----
+  function buildSceneViewer() {
+    var url = 'intent://arvr.google.com/scene-viewer/1.0?file=' +
+              encodeURIComponent(GLB) + '&mode=ar_preferred' +
+              '&title=' + encodeURIComponent(TITLE) +
+              '&link='  + encodeURIComponent(LINK);
+    url += '#Intent;scheme=https;package=com.google.android.googlequicksearchbox;' +
+           'action=android.intent.action.VIEW;' +
+           'S.browser_fallback_url=' + encodeURIComponent(LINK) + ';end;';
+    return url;
+  }
+  function launchAndroid() {
+    window.location.href = buildSceneViewer();
+  }
+
+  if (IS_IOS) {
+    // su iOS il click programmatico spesso passa; prepariamo anche il fallback manuale
+    elButton.setAttribute('rel', 'ar');
+    elButton.appendChild(document.createElement('img'));
+    elButton.setAttribute('href', USDZ + '#callToAction=' + encodeURIComponent('Gucci.com'));
+    elButton.addEventListener('click', function (e) { /* il link rel=ar gestisce da solo */ });
+    setTimeout(launchIOS, 350);
+    setTimeout(function () { show(elManual); }, 1200);
+
+  } else if (IS_ANDROID) {
+    elButton.setAttribute('href', buildSceneViewer());
+    elButton.addEventListener('click', function (e) {
+      e.preventDefault(); launchAndroid();
+    });
+    setTimeout(launchAndroid, 350);
+    setTimeout(function () { show(elManual); }, 1500);
+
+  } else {
+    show(elDesktop);
+  }
+})();
+</script>
+</body>
+</html>
